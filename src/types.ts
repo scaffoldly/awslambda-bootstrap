@@ -1,6 +1,6 @@
 export type EndpointRequest = {
   requestId: string;
-  endpoint: string;
+  endpoint: URL;
   event: any;
   initialDeadline: number;
 };

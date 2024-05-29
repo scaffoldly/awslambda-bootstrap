@@ -31,13 +31,13 @@ function convertHeaders(
 }
 
 const waitForEndpoint = async (
-  endpoint: string,
+  endpoint: URL,
   deadline: number
 ): Promise<{ deadline: number }> => {
   const start = Date.now();
-  const url = new URL(endpoint);
-  const hostname = url.hostname;
-  const port = parseInt(url.port, 10) || (url.protocol === "https:" ? 443 : 80);
+  const hostname = endpoint.hostname;
+  const port =
+    parseInt(endpoint.port, 10) || (endpoint.protocol === "https:" ? 443 : 80);
 
   return new Promise((resolve) => {
     const socket = new net.Socket();
