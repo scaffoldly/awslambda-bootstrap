@@ -8,7 +8,7 @@ import { bootstrap } from "../src/bootstrap";
     return;
   }
 
-  log("Starting bootstrap");
+  log("Starting bootstrap", { env: JSON.stringify(process.env) });
 
   try {
     await bootstrap();
