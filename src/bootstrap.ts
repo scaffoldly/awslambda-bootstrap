@@ -12,32 +12,39 @@ export const bootstrap = async (): Promise<void> => {
     throw new Error("No handler specified");
   }
 
-  const handler = new URL(_HANDLER);
+  let handler: URL | undefined = undefined;
+  let bin: string;
+  let endpoint: string | undefined = undefined;
 
-  let app: string = handler.protocol.slice(0, -1);
-  let endpoint = handler.toString();
+  // handler is in the format of
+  // - `{some-bin}:http://localhost:{the-bins-port} (will start some-bin, and forward requests to the http server)
+  // - `http://localhost:{some-port}` (will forward the request to the http server)
+  // - `{some-bin}` (will forward the event to the bin)
+
+  try {
+    handler = new URL(_HANDLER);
+    bin = handler.protocol.slice(0, -1);
+    endpoint = handler.toString();
+  } catch (e) {
+    bin = _HANDLER;
+  }
+
   let childProcess: ChildProcess | undefined = undefined;
 
-  if (app !== "http" && app !== "https") {
+  if (handler && bin !== "http" && bin !== "https") {
     endpoint = handler.pathname;
-    try {
-      await which(app);
-    } catch (error) {
-      throw new Error(
-        `Could not find \`${app}\` in system path ${process.env.PATH}`
-      );
-    }
 
     const subcommand = IS_OFFLINE === "true" ? "dev" : "start";
 
-    childProcess = spawn(app, [subcommand], {
+    childProcess = spawn(bin, [subcommand], {
       detached: true,
       stdio: "inherit",
     });
   }
 
   try {
-    await routeEvents(AWS_LAMBDA_RUNTIME_API, endpoint);
+    await which(bin);
+    await routeEvents(AWS_LAMBDA_RUNTIME_API, bin, endpoint);
   } catch (e) {
     if (childProcess) {
       childProcess.kill();
