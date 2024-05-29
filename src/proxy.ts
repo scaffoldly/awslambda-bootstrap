@@ -1,4 +1,4 @@
-import { APIGatewayProxyResultV2 } from "aws-lambda";
+import { APIGatewayProxyResult } from "aws-lambda";
 import axios, { AxiosResponseHeaders, RawAxiosResponseHeaders } from "axios";
 import net from "net";
 import { EndpointRequest, EndpointResponse } from "./types";
@@ -102,22 +102,16 @@ export const endpointProxy = async ({
       headers: rawHeaders,
       data: decodedBody,
       timeout: deadline,
+      responseType: "arraybuffer",
     })
     .then((response) => {
       const { data: rawData, headers: rawHeaders } = response;
 
-      const body =
-        rawData && typeof rawData === "string"
-          ? rawData
-          : Buffer.from(rawData).toString("base64");
-
-      const isBase64Encoded = rawData && typeof rawData !== "string";
-
-      const payload: APIGatewayProxyResultV2 = {
+      const payload: APIGatewayProxyResult = {
         statusCode: response.status,
         headers: convertHeaders(rawHeaders),
-        body,
-        isBase64Encoded,
+        body: Buffer.from(rawData).toString("base64"),
+        isBase64Encoded: true,
       };
 
       return {

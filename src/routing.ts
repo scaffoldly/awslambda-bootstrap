@@ -1,4 +1,3 @@
-import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import axios from "axios";
 import { EndpointRequest } from "./types";
 import { endpointProxy } from "./proxy";
@@ -13,34 +12,37 @@ export const routeEvents = async (
     {
       // block indefinitely until a response is received
       timeout: 0,
+      responseType: "text",
     }
   );
 
-  const requestId = headers["Lambda-Runtime-Aws-Request-Id"] as string;
+  const requestId = headers["lambda-runtime-aws-request-id"];
+
+  if (!requestId) {
+    throw new Error("No request ID found in response headers");
+  }
 
   console.log("Received request from Lambda Runtime API", { requestId });
 
   const initialDeadline = Number.parseInt(
-    headers["Lambda-Runtime-Deadline-Ms"]
+    headers["lambda-runtime-deadline-ms"]
   );
 
-  // TODO handle V1 payloads
-  const event = JSON.parse(data) as APIGatewayProxyEventV2;
-  let payload: APIGatewayProxyResultV2 | undefined = undefined;
+  let payload: any | undefined = undefined;
 
   if (!endpoint) {
     const { execa } = await import("execa");
     // no endpoint, just exec the bin
     const { stdout } = await execa({
       stderr: ["inherit"],
-    })`${bin} ${JSON.stringify(event)}`;
+    })`${bin} ${data}`;
 
-    payload = JSON.parse(stdout) as APIGatewayProxyResultV2;
+    payload = JSON.parse(stdout);
   } else {
     const request: EndpointRequest = {
       requestId,
       endpoint,
-      event,
+      event: JSON.parse(data),
       initialDeadline,
     };
 
