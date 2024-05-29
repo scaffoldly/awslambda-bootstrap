@@ -1,6 +1,6 @@
 {
   "name": "@scaffoldly/awslambda-bootstrap",
-  "version": "0.1.1",
+  "version": "1.0.0-0",
   "description": "Bootstrap Script for AWS Lambda",
   "repository": "https://github.com/scaffoldly/awslambda-bootstrap",
   "author": "scaffold.ly",
