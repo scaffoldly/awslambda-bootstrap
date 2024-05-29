@@ -1,4 +1,4 @@
-import { log } from "src/log";
+import { log } from "../src/log";
 import packageJson from "../package.json";
 import { bootstrap } from "../src/bootstrap";
 
