@@ -1,6 +1,8 @@
 import { ChildProcess, spawn } from "child_process";
 import which from "which";
 import { routeEvents } from "./routing";
+import { log } from "./log";
+
 const { _HANDLER, IS_OFFLINE, AWS_LAMBDA_RUNTIME_API } = process.env;
 
 export const bootstrap = async (): Promise<void> => {
@@ -11,6 +13,8 @@ export const bootstrap = async (): Promise<void> => {
   if (!_HANDLER) {
     throw new Error("No handler specified");
   }
+
+  log("Bootstraping", { _HANDLER, IS_OFFLINE, AWS_LAMBDA_RUNTIME_API });
 
   let handler: URL | undefined = undefined;
   let bin: string;
@@ -25,13 +29,17 @@ export const bootstrap = async (): Promise<void> => {
     handler = new URL(_HANDLER);
     bin = handler.protocol.slice(0, -1);
     endpoint = handler.toString();
+    log("Found protocol in handler", { bin, endpoint });
   } catch (e) {
+    log("No protocol found in handler", { _HANDLER });
     bin = _HANDLER;
   }
 
   let childProcess: ChildProcess | undefined = undefined;
 
   if (handler && bin !== "http" && bin !== "https") {
+    log("Starting child process", { bin, endpoint });
+
     endpoint = handler.pathname;
 
     const subcommand = IS_OFFLINE === "true" ? "dev" : "start";
@@ -40,13 +48,22 @@ export const bootstrap = async (): Promise<void> => {
       detached: true,
       stdio: "inherit",
     });
+
+    // TODO Decide if we should do this...
+    childProcess.unref();
+
+    log("Started child process", { bin, subcommand, pid: childProcess.pid });
   }
 
   try {
-    await which(bin);
+    log("Checking if bin is in PATH", { bin });
+    await which(bin, { all: false });
+
+    log("Routing events", { bin, endpoint });
     await routeEvents(AWS_LAMBDA_RUNTIME_API, bin, endpoint);
   } catch (e) {
     if (childProcess) {
+      log("Killing child process", { pid: childProcess.pid });
       childProcess.kill();
     }
     throw e;

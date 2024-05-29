@@ -1,3 +1,4 @@
+import { log } from "src/log";
 import packageJson from "../package.json";
 import { bootstrap } from "../src/bootstrap";
 
@@ -6,6 +7,8 @@ import { bootstrap } from "../src/bootstrap";
     console.log(packageJson.version);
     return;
   }
+
+  log("Starting bootstrap");
 
   try {
     await bootstrap();
@@ -17,4 +20,5 @@ import { bootstrap } from "../src/bootstrap";
     }
     process.exit(1);
   }
+  log("Bootstrap complete");
 })();

@@ -1,12 +1,15 @@
 import axios from "axios";
 import { EndpointRequest } from "./types";
 import { endpointProxy } from "./proxy";
+import { log } from "./log";
 
 export const routeEvents = async (
   runtimeApi: string,
   bin: string,
   endpoint?: string
 ): Promise<void> => {
+  log("Waiting for next event from Lambda Runtime API", { runtimeApi });
+
   const { headers, data } = await axios.get(
     `http://${runtimeApi}/2018-06-01/runtime/invocation/next`,
     {
@@ -16,13 +19,13 @@ export const routeEvents = async (
     }
   );
 
+  log("Received event from Lambda Runtime API", { headers, data });
+
   const requestId = headers["lambda-runtime-aws-request-id"];
 
   if (!requestId) {
     throw new Error("No request ID found in response headers");
   }
-
-  console.log("Received request from Lambda Runtime API", { requestId });
 
   const initialDeadline = Number.parseInt(
     headers["lambda-runtime-deadline-ms"]
@@ -31,14 +34,20 @@ export const routeEvents = async (
   let payload: any | undefined = undefined;
 
   if (!endpoint) {
+    log("No endpoint specified, executing bin", { bin });
+
     const { execa } = await import("execa");
     // no endpoint, just exec the bin
     const { stdout } = await execa({
       stderr: ["inherit"],
     })`${bin} ${data}`;
 
+    log("Bin execution complete", { bin, stdout });
+
     payload = JSON.parse(stdout);
   } else {
+    log("Endpoint specified, proxying request", { endpoint });
+
     const request: EndpointRequest = {
       requestId,
       endpoint,
@@ -47,6 +56,8 @@ export const routeEvents = async (
     };
 
     payload = (await endpointProxy(request)).payload;
+
+    log("Proxy request complete", { endpoint, payload });
   }
 
   await axios.post(
@@ -54,9 +65,7 @@ export const routeEvents = async (
     payload
   );
 
-  console.log("Invocation response successfully sent to Lambda Runtime API", {
-    requestId,
-  });
+  log("Response sent to Lambda Runtime API", { runtimeApi, requestId });
 
   return routeEvents(runtimeApi, bin, endpoint);
 };

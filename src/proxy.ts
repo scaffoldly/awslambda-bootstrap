@@ -2,6 +2,7 @@ import { APIGatewayProxyResult } from "aws-lambda";
 import axios, { AxiosResponseHeaders, RawAxiosResponseHeaders } from "axios";
 import net from "net";
 import { EndpointRequest, EndpointResponse } from "./types";
+import { log } from "./log";
 
 function convertHeaders(
   headers: RawAxiosResponseHeaders | AxiosResponseHeaders
@@ -75,7 +76,9 @@ export const endpointProxy = async ({
   } = event;
   const method = requestContext.http.method;
 
+  log("Waiting for endpoint to start", { endpoint, initialDeadline });
   const { deadline } = await waitForEndpoint(endpoint, initialDeadline);
+  log("Endpoint started", { endpoint, deadline });
 
   if (deadline <= 0) {
     throw new Error(
@@ -93,104 +96,30 @@ export const endpointProxy = async ({
   const decodedBody =
     isBase64Encoded && rawBody ? Buffer.from(rawBody, "base64") : rawBody;
 
-  console.log(`Invoking ${method} on ${url.toString()}`);
+  log("Proxying request", { url, method, rawHeaders, decodedBody, deadline });
 
-  return axios
-    .request({
-      method: method.toLowerCase(),
-      url: url.toString(),
-      headers: rawHeaders,
-      data: decodedBody,
-      timeout: deadline,
-      responseType: "arraybuffer",
-    })
-    .then((response) => {
-      const { data: rawData, headers: rawHeaders } = response;
+  const response = await axios.request({
+    method: method.toLowerCase(),
+    url: url.toString(),
+    headers: rawHeaders,
+    data: decodedBody,
+    timeout: deadline,
+    responseType: "arraybuffer",
+  });
 
-      const payload: APIGatewayProxyResult = {
-        statusCode: response.status,
-        headers: convertHeaders(rawHeaders),
-        body: Buffer.from(rawData).toString("base64"),
-        isBase64Encoded: true,
-      };
+  const { data: rawData, headers: rawResponseHeaders } = response;
 
-      return {
-        requestId,
-        payload,
-      };
-    });
+  log("Proxy request complete", { url, method, rawResponseHeaders, rawData });
+
+  const payload: APIGatewayProxyResult = {
+    statusCode: response.status,
+    headers: convertHeaders(rawResponseHeaders),
+    body: Buffer.from(rawData).toString("base64"),
+    isBase64Encoded: true,
+  };
+
+  return {
+    requestId,
+    payload,
+  };
 };
-
-// export const endpointProxy = async (endpoint: URL): Promise<void> => {
-//   return axios
-//     .get(
-//       `http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/next`,
-//       { timeout: 0 }
-//     )
-//     .then(({ headers, data }) => {
-//       const requestId = headers["Lambda-Runtime-Aws-Request-Id"] as string;
-//       const deadline = Number.parseInt(headers["Lambda-Runtime-Deadline-Ms"]);
-
-//       console.log("Received request from Lambda Runtime API", { requestId });
-
-//       let event = data as APIGatewayProxyEventV2;
-//       const {
-//         requestContext,
-//         rawPath,
-//         rawQueryString,
-//         headers: rawHeaders,
-//         body: rawBody,
-//         isBase64Encoded,
-//       } = event;
-//       const method = requestContext.http.method;
-
-//       const url = new URL(rawPath, endpoint);
-//       if (rawQueryString) {
-//         url.search = new URLSearchParams(rawQueryString).toString();
-//       }
-
-//       const decodedBody =
-//         isBase64Encoded && rawBody ? Buffer.from(rawBody, "base64") : rawBody;
-
-//       const request: axios.AxiosRequestConfig<any> = {
-//         method: method.toLowerCase(),
-//         url: url.toString(),
-//         headers: rawHeaders,
-//         data: decodedBody,
-//         timeout: deadline,
-//       };
-
-//       return axios
-//         .request(request)
-//         .then((response) => ({ requestId, response }));
-//     })
-//     .then(({ requestId, response }) => {
-//       const { data: rawData, headers: rawHeaders } = response;
-
-//       const body =
-//         rawData && typeof rawData === "string"
-//           ? rawData
-//           : Buffer.from(rawData).toString("base64");
-
-//       const isBase64Encoded = rawData && typeof rawData !== "string";
-
-//       const payload: APIGatewayProxyResultV2 = {
-//         statusCode: response.status,
-//         headers: convertHeaders(rawHeaders),
-//         body,
-//         isBase64Encoded,
-//       };
-
-//       return { requestId, payload };
-//     })
-//     .then(({ requestId, payload }) => {
-//       return axios.post(
-//         `http://${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/${requestId}/response`,
-//         payload
-//       );
-//     })
-//     .then(({ config }) => {
-//       console.log(`Invocation response successfully sent to ${config.url}`);
-//     });
-//   // TODO Error catcher?
-// };
