@@ -1,5 +1,10 @@
 import { APIGatewayProxyResult } from "aws-lambda";
-import axios, { AxiosResponseHeaders, RawAxiosResponseHeaders } from "axios";
+import axios, {
+  AxiosResponse,
+  AxiosResponseHeaders,
+  RawAxiosResponseHeaders,
+  isAxiosError,
+} from "axios";
 import net from "net";
 import { EndpointRequest, EndpointResponse } from "./types";
 import { log } from "./log";
@@ -102,14 +107,27 @@ export const endpointProxy = async ({
 
   log("Proxying request", { url, method, rawHeaders, decodedBody, timeout });
 
-  const response = await axios.request({
-    method: method.toLowerCase(),
-    url: url.toString(),
-    headers: rawHeaders,
-    data: decodedBody,
-    timeout,
-    responseType: "arraybuffer",
-  });
+  let response: AxiosResponse<any, any> | undefined = undefined;
+  try {
+    response = await axios.request({
+      method: method.toLowerCase(),
+      url: url.toString(),
+      headers: rawHeaders,
+      data: decodedBody,
+      timeout,
+      responseType: "arraybuffer",
+    });
+  } catch (e) {
+    if (isAxiosError(e) && e.response) {
+      response = e.response;
+    } else {
+      throw e;
+    }
+  }
+
+  if (!response) {
+    throw new Error("No response received");
+  }
 
   const { data: rawData, headers: rawResponseHeaders } = response;
 
