@@ -2,7 +2,7 @@ export type EndpointRequest = {
   requestId: string;
   endpoint: URL;
   event: any;
-  initialDeadline: number;
+  deadline: number;
 };
 
 export type EndpointResponse = {

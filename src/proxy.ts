@@ -33,12 +33,13 @@ function convertHeaders(
 const waitForEndpoint = async (
   endpoint: URL,
   deadline: number
-): Promise<{ deadline: number }> => {
+): Promise<{ timeout: number }> => {
   const start = Date.now();
+  const timeout = deadline - start;
 
   // Stop recursing if the deadline has passed
-  if (deadline < start) {
-    return { deadline: 0 };
+  if (timeout < 0) {
+    return { timeout: 0 };
   }
 
   const hostname = endpoint.hostname;
@@ -55,13 +56,13 @@ const waitForEndpoint = async (
       );
     };
 
-    socket.setTimeout(Date.now() - deadline);
+    socket.setTimeout(deadline - start);
     socket.once("error", onError);
     socket.once("timeout", onError);
 
     socket.connect(port, hostname, () => {
       socket.end();
-      resolve({ deadline: deadline - (Date.now() - start) });
+      resolve({ timeout: deadline - Date.now() });
     });
   });
 };
@@ -70,7 +71,7 @@ export const endpointProxy = async ({
   requestId,
   endpoint,
   event,
-  initialDeadline,
+  deadline,
 }: EndpointRequest): Promise<EndpointResponse> => {
   const {
     requestContext,
@@ -82,15 +83,12 @@ export const endpointProxy = async ({
   } = event;
   const method = requestContext.http.method;
 
-  log("Waiting for endpoint to start", { endpoint, initialDeadline });
-  const { deadline } = await waitForEndpoint(endpoint, initialDeadline);
-  log("Endpoint started", { endpoint, deadline });
+  log("Waiting for endpoint to start", { endpoint, deadline });
+  const { timeout } = await waitForEndpoint(endpoint, deadline);
 
-  if (!deadline) {
+  if (!timeout) {
     throw new Error(
-      `${endpoint.toString()} took longer than ${Math.floor(
-        initialDeadline / 1000
-      )} second(s) to start.`
+      `${endpoint.toString()} took longer than ${deadline} milliseconds to start.`
     );
   }
 
@@ -102,14 +100,14 @@ export const endpointProxy = async ({
   const decodedBody =
     isBase64Encoded && rawBody ? Buffer.from(rawBody, "base64") : rawBody;
 
-  log("Proxying request", { url, method, rawHeaders, decodedBody, deadline });
+  log("Proxying request", { url, method, rawHeaders, decodedBody, timeout });
 
   const response = await axios.request({
     method: method.toLowerCase(),
     url: url.toString(),
     headers: rawHeaders,
     data: decodedBody,
-    timeout: Date.now() - deadline,
+    timeout,
     responseType: "arraybuffer",
   });
 

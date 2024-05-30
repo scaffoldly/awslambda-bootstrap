@@ -27,9 +27,7 @@ export const routeEvents = async (
     throw new Error("No request ID found in response headers");
   }
 
-  const initialDeadline = Number.parseInt(
-    headers["lambda-runtime-deadline-ms"]
-  );
+  const deadline = Number.parseInt(headers["lambda-runtime-deadline-ms"]);
 
   let payload: any | undefined = undefined;
 
@@ -54,7 +52,7 @@ export const routeEvents = async (
       requestId,
       endpoint,
       event: JSON.parse(data),
-      initialDeadline,
+      deadline,
     };
 
     payload = (await endpointProxy(request)).payload;
