@@ -35,6 +35,12 @@ const waitForEndpoint = async (
   deadline: number
 ): Promise<{ deadline: number }> => {
   const start = Date.now();
+
+  // Stop recursing if the deadline has passed
+  if (deadline < start) {
+    return { deadline: 0 };
+  }
+
   const hostname = endpoint.hostname;
   const port =
     parseInt(endpoint.port, 10) || (endpoint.protocol === "https:" ? 443 : 80);
@@ -49,7 +55,7 @@ const waitForEndpoint = async (
       );
     };
 
-    socket.setTimeout(deadline);
+    socket.setTimeout(Date.now() - deadline);
     socket.once("error", onError);
     socket.once("timeout", onError);
 
@@ -80,7 +86,7 @@ export const endpointProxy = async ({
   const { deadline } = await waitForEndpoint(endpoint, initialDeadline);
   log("Endpoint started", { endpoint, deadline });
 
-  if (deadline <= 0) {
+  if (!deadline) {
     throw new Error(
       `${endpoint.toString()} took longer than ${Math.floor(
         initialDeadline / 1000
@@ -103,7 +109,7 @@ export const endpointProxy = async ({
     url: url.toString(),
     headers: rawHeaders,
     data: decodedBody,
-    timeout: deadline,
+    timeout: Date.now() - deadline,
     responseType: "arraybuffer",
   });
 

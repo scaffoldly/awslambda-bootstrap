@@ -42,6 +42,8 @@ export const routeEvents = async (
       stderr: ["inherit"],
     })`${bin} ${data}`;
 
+    // TODO: handle timeout
+
     log("Bin execution complete", { bin, stdout });
 
     payload = JSON.parse(stdout);
