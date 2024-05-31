@@ -8,11 +8,11 @@
   "main": "dist/main.js",
   "files": [
     "dist/**/*",
-    "tools/**/*"
+    "scripts/**/*"
   ],
   "bin": {
     "bootstrap": "dist/main.js",
-    "process-info": "tools/process-info.cjs"
+    "lambda-env": "scripts/lambda-env.cjs"
   },
   "scripts": {
     "build": "webpack",
