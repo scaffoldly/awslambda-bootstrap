@@ -7,10 +7,12 @@
   "license": "MIT",
   "main": "dist/main.js",
   "files": [
-    "dist/**/*"
+    "dist/**/*",
+    "tools/**/*"
   ],
   "bin": {
-    "bootstrap": "dist/main.js"
+    "bootstrap": "dist/main.js",
+    "process-info": "tools/process-info.cjs"
   },
   "scripts": {
     "build": "webpack",

@@ -2,6 +2,7 @@
 /* eslint-disable no-undef */
 const path = require("path");
 const webpack = require("webpack");
+const fs = require("fs");
 
 // eslint-disable-next-line no-undef
 module.exports = {
@@ -40,5 +41,10 @@ module.exports = {
 
   plugins: [
     new webpack.BannerPlugin({ banner: "#!/usr/bin/env node", raw: true }),
+    function () {
+      this.hooks.done.tapPromise("Make executable", async () => {
+        fs.chmodSync(`${__dirname}/dist/main.js`, "755");
+      });
+    },
   ],
 };
