@@ -1,4 +1,19 @@
-export type EndpointRequest = {
+import { APIGatewayProxyResult } from "aws-lambda";
+
+export type LambdaEvent = {
+  requestId: string;
+  event: any;
+  deadline: number;
+};
+
+export type EndpointExecRequest = {
+  requestId: string;
+  bin: string;
+  event: any;
+  deadline: number;
+};
+
+export type EndpointProxyRequest = {
   requestId: string;
   endpoint: URL;
   event: any;
@@ -7,5 +22,6 @@ export type EndpointRequest = {
 
 export type EndpointResponse = {
   requestId: string;
-  payload: any;
+  // TODO: support results to different invokers
+  payload: APIGatewayProxyResult;
 };

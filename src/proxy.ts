@@ -1,4 +1,3 @@
-import { APIGatewayProxyResult } from "aws-lambda";
 import axios, {
   AxiosResponse,
   AxiosResponseHeaders,
@@ -6,8 +5,13 @@ import axios, {
   isAxiosError,
 } from "axios";
 import net from "net";
-import { EndpointRequest, EndpointResponse } from "./types";
-import { log } from "./log";
+import {
+  EndpointExecRequest,
+  EndpointProxyRequest,
+  EndpointResponse,
+} from "./types";
+import { info, log } from "./log";
+import { ChildProcess, spawn } from "child_process";
 
 function convertHeaders(
   headers: RawAxiosResponseHeaders | AxiosResponseHeaders
@@ -72,12 +76,84 @@ const waitForEndpoint = async (
   });
 };
 
+export const endpointSpawn = async (
+  handler: string,
+  offline: boolean
+): Promise<{
+  childProcess?: ChildProcess;
+  bin?: string;
+  endpoint?: URL;
+}> => {
+  // handler is in the format of
+  // - `{some-bin}@http://localhost:{the-bins-port} (will start some-bin, and forward requests to the http server)
+  // - `http://localhost:{some-port}` (will forward the request to the http server)
+  // - `{some-bin}` (will forward the event to the bin)
+  let [bin, endpoint] = handler.split(/(?<=^[^@]*)@/) as [
+    string | undefined,
+    string | undefined | URL
+  ];
+
+  let childProcess: ChildProcess | undefined = undefined;
+
+  if (bin && !endpoint) {
+    try {
+      endpoint = new URL(bin).toString();
+      bin = undefined;
+    } catch (e) {}
+  }
+
+  if (bin && endpoint) {
+    log("Starting child process", { bin });
+
+    const subcommand = offline ? "dev" : "start";
+
+    info(`Running: \`${bin} ${subcommand}\``);
+
+    childProcess = spawn(bin, [subcommand], {
+      detached: true,
+      stdio: "inherit",
+    });
+
+    // TODO Decide if we should do this...
+    childProcess.unref();
+
+    log("Started child process", { bin, subcommand, pid: childProcess.pid });
+  }
+
+  endpoint = endpoint ? new URL(endpoint) : undefined;
+
+  return { childProcess, bin, endpoint };
+};
+
+export const endpointExec = async ({
+  requestId,
+  bin,
+  event,
+  deadline,
+}: EndpointExecRequest): Promise<EndpointResponse> => {
+  const { execa } = await import("execa");
+
+  const { stdout } = await execa({
+    stderr: ["inherit"],
+  })`${bin} ${event}`;
+
+  // TODO: handle deadline
+  info("TODO: need to handle deadline", { deadline });
+
+  const payload = JSON.parse(stdout);
+
+  return {
+    requestId,
+    payload,
+  };
+};
+
 export const endpointProxy = async ({
   requestId,
   endpoint,
   event,
   deadline,
-}: EndpointRequest): Promise<EndpointResponse> => {
+}: EndpointProxyRequest): Promise<EndpointResponse> => {
   const {
     requestContext,
     rawPath,
@@ -133,15 +209,13 @@ export const endpointProxy = async ({
 
   log("Proxy request complete", { url, method, rawResponseHeaders, rawData });
 
-  const payload: APIGatewayProxyResult = {
-    statusCode: response.status,
-    headers: convertHeaders(rawResponseHeaders),
-    body: Buffer.from(rawData).toString("base64"),
-    isBase64Encoded: true,
-  };
-
   return {
     requestId,
-    payload,
+    payload: {
+      statusCode: response.status,
+      headers: convertHeaders(rawResponseHeaders),
+      body: Buffer.from(rawData).toString("base64"),
+      isBase64Encoded: true,
+    },
   };
 };

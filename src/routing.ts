@@ -1,7 +1,7 @@
-import axios from "axios";
-import { EndpointRequest } from "./types";
-import { endpointProxy } from "./proxy";
+import { EndpointProxyRequest, EndpointExecRequest } from "./types";
+import { endpointExec, endpointProxy } from "./proxy";
 import { log } from "./log";
+import { nextEvent, respondToEvent } from "./runtime";
 
 export const routeEvents = async (
   runtimeApi: string,
@@ -10,48 +10,30 @@ export const routeEvents = async (
 ): Promise<void> => {
   log("Waiting for next event from Lambda Runtime API", { runtimeApi });
 
-  const { headers, data } = await axios.get(
-    `http://${runtimeApi}/2018-06-01/runtime/invocation/next`,
-    {
-      // block indefinitely until a response is received
-      timeout: 0,
-      responseType: "text",
-    }
-  );
-
-  log("Received event from Lambda Runtime API", { headers, data });
-
-  const requestId = headers["lambda-runtime-aws-request-id"];
-
-  if (!requestId) {
-    throw new Error("No request ID found in response headers");
-  }
-
-  const deadline = Number.parseInt(headers["lambda-runtime-deadline-ms"]);
+  const { requestId, event, deadline } = await nextEvent(runtimeApi);
 
   let payload: any | undefined = undefined;
 
   if (bin && !endpoint) {
     log("No endpoint specified, executing bin", { bin });
 
-    const { execa } = await import("execa");
-    // no endpoint, just exec the bin
-    const { stdout } = await execa({
-      stderr: ["inherit"],
-    })`${bin} ${data}`;
+    const request: EndpointExecRequest = {
+      requestId,
+      bin,
+      event,
+      deadline,
+    };
 
-    // TODO: handle timeout
+    payload = (await endpointExec(request)).payload;
 
-    log("Bin execution complete", { bin, stdout });
-
-    payload = JSON.parse(stdout);
+    log("Bin execution complete", { bin, payload });
   } else if (endpoint) {
     log("Endpoint specified, proxying request", { endpoint });
 
-    const request: EndpointRequest = {
+    const request: EndpointProxyRequest = {
       requestId,
       endpoint,
-      event: JSON.parse(data),
+      event,
       deadline,
     };
 
@@ -71,10 +53,7 @@ Expected format: {bin}@{endpoint} or {bin} or {endpoint}:
     );
   }
 
-  await axios.post(
-    `http://${runtimeApi}/2018-06-01/runtime/invocation/${requestId}/response`,
-    payload
-  );
+  await respondToEvent(runtimeApi, requestId, payload);
 
   log("Response sent to Lambda Runtime API", { runtimeApi, requestId });
 
