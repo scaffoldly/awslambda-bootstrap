@@ -7,9 +7,9 @@
     "module": "Node16",
     "rootDir": "./",
     "outDir": "./dist",
-    "sourceMap": false,
-    "declaration": false,
-    "declarationMap": false,
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
 
     /* Strict Type-Checking Options */
     "strict": true,
