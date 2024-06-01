@@ -20,4 +20,3 @@ export type EndpointResponse = {
     requestId: string;
     payload: APIGatewayProxyResult;
 };
-//# sourceMappingURL=types.d.ts.map

@@ -1,11 +1,11 @@
-import { endpointSpawn, endpointProxy } from "./proxy";
-import { nextEvent, respondToEvent } from "./runtime";
+import { endpointSpawn, endpointProxy } from "./internal/proxy";
+import { nextEvent, respondToEvent } from "./internal/runtime";
 import {
   LambdaEvent,
   EndpointExecRequest,
   EndpointProxyRequest,
   EndpointResponse,
-} from "./types";
+} from "./internal/types";
 
 export {
   endpointSpawn,

@@ -8,4 +8,3 @@ export declare const endpointSpawn: (handler: string, offline: boolean) => Promi
 }>;
 export declare const endpointExec: ({ requestId, bin, event, deadline, }: EndpointExecRequest) => Promise<EndpointResponse>;
 export declare const endpointProxy: ({ requestId, endpoint, event, deadline, }: EndpointProxyRequest) => Promise<EndpointResponse>;
-//# sourceMappingURL=proxy.d.ts.map

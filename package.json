@@ -7,16 +7,18 @@
   "license": "MIT",
   "main": "dist/main.js",
   "files": [
+    "build/**/*",
     "dist/**/*",
     "scripts/**/*"
   ],
   "bin": {
-    "bootstrap": "dist/main.js",
+    "bootstrap": "dist/bootstrap.js",
     "lambda-env": "scripts/lambda-env.cjs"
   },
   "scripts": {
     "build": "webpack",
-    "start": "node -r ts-node/register -r tsconfig-paths/register cli/index.ts"
+    "start": "node -r ts-node/register -r tsconfig-paths/register cli/index.ts",
+    "postinstall": "tsc"
   },
   "engines": {
     "node": ">=18"
@@ -39,6 +41,7 @@
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "types-webpack-bundler": "^1.0.2",
     "typescript": "5",
     "webpack": "^5.91.0",
     "webpack-cli": "^5.1.4",
