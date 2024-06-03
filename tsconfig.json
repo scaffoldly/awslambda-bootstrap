@@ -6,7 +6,7 @@
     "target": "ESNext",
     "module": "Node16",
     "rootDir": "./",
-    "outDir": "./dist",
+    "outDir": "./lib",
     "declaration": true,
 
     /* Strict Type-Checking Options */
@@ -39,5 +39,5 @@
     /* Advanced Options */
     "forceConsistentCasingInFileNames": true
   },
-  "exclude": ["dist/**/*", "build/**/*", "node_modules/**/*"]
+  "exclude": ["dist/**/*", "lib/**/*", "build/**/*", "node_modules/**/*"]
 }
