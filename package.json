@@ -5,7 +5,7 @@
   "repository": "https://github.com/scaffoldly/awslambda-bootstrap",
   "author": "scaffold.ly",
   "license": "MIT",
-  "main": "dist/main.js",
+  "main": "lib/src/index.js",
   "files": [
     "lib/**/*",
     "dist/**/*",
