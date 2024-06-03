@@ -39,5 +39,5 @@
     /* Advanced Options */
     "forceConsistentCasingInFileNames": true
   },
-  "exclude": ["dist/**/*", "lib/**/*", "build/**/*", "node_modules/**/*"]
+  "exclude": ["dist/**/*", "lib/**/*", "node_modules/**/*"]
 }
