@@ -17,7 +17,7 @@ export const bootstrap = async (): Promise<void> => {
 
   const { childProcess, bin, endpoint } = await endpointSpawn(
     _HANDLER,
-    IS_OFFLINE === "true"
+    process.env
   );
 
   try {

@@ -78,7 +78,7 @@ const waitForEndpoint = async (
 
 export const endpointSpawn = async (
   handler: string,
-  offline: boolean
+  env?: NodeJS.ProcessEnv
 ): Promise<{
   childProcess?: ChildProcess;
   bin?: string;
@@ -105,19 +105,19 @@ export const endpointSpawn = async (
   if (bin && endpoint) {
     log("Starting child process", { bin });
 
-    const subcommand = offline ? "dev" : "start";
+    info(`Running: \`${bin}\``);
 
-    info(`Running: \`${bin} ${subcommand}\``);
-
-    childProcess = spawn(bin, [subcommand], {
+    const cmds = bin.split(" ");
+    childProcess = spawn(cmds[0], cmds.slice(1), {
       detached: true,
       stdio: "inherit",
+      env: env,
     });
 
     // TODO Decide if we should do this...
     childProcess.unref();
 
-    log("Started child process", { bin, subcommand, pid: childProcess.pid });
+    log("Started child process", { cmds, pid: childProcess.pid });
   }
 
   endpoint = endpoint ? new URL(endpoint) : undefined;
