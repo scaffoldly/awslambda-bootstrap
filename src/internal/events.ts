@@ -1,16 +1,16 @@
-import { EndpointProxyRequest, EndpointExecRequest } from "./types";
-import { endpointExec, endpointProxy } from "./proxy";
 import { log } from "./log";
-import { nextEvent, respondToEvent } from "./runtime";
+import { EndpointProxyRequest, EndpointExecRequest } from "./types";
+import { endpointExec, endpointProxy } from "./endpoints";
+import { getRuntimeEvent, postRuntimeEventResponse } from "./runtime";
 
-export const routeEvents = async (
+export const pollForEvents = async (
   runtimeApi: string,
   bin?: string,
   endpoint?: URL
 ): Promise<void> => {
   log("Waiting for next event from Lambda Runtime API", { runtimeApi });
 
-  const { requestId, event, deadline } = await nextEvent(runtimeApi);
+  const { requestId, event, deadline } = await getRuntimeEvent(runtimeApi);
 
   let payload: any | undefined = undefined;
 
@@ -53,9 +53,9 @@ Expected format: {bin}@{endpoint} or {bin} or {endpoint}:
     );
   }
 
-  await respondToEvent(runtimeApi, requestId, payload);
+  await postRuntimeEventResponse(runtimeApi, requestId, payload);
 
   log("Response sent to Lambda Runtime API", { runtimeApi, requestId });
 
-  return routeEvents(runtimeApi, bin, endpoint);
+  return pollForEvents(runtimeApi, bin, endpoint);
 };

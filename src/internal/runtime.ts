@@ -1,8 +1,10 @@
 import axios from "axios";
-import { LambdaEvent } from "./types";
+import { RuntimeEvent } from "./types";
 
-export const nextEvent = async (runtimeApi: string): Promise<LambdaEvent> => {
-  const { headers, data } = await axios.get(
+export const getRuntimeEvent = async (
+  runtimeApi: string
+): Promise<RuntimeEvent> => {
+  const { headers, data: event } = await axios.get(
     `http://${runtimeApi}/2018-06-01/runtime/invocation/next`,
     {
       // block indefinitely until a response is received
@@ -19,12 +21,14 @@ export const nextEvent = async (runtimeApi: string): Promise<LambdaEvent> => {
 
   const deadline = Number.parseInt(headers["lambda-runtime-deadline-ms"]);
 
-  const event = JSON.parse(data);
+  if (!event || typeof event !== "string") {
+    throw new Error("No event found in response data");
+  }
 
   return { requestId, event, deadline };
 };
 
-export const respondToEvent = async (
+export const postRuntimeEventResponse = async (
   runtimeApi: string,
   requestId: string,
   payload: any

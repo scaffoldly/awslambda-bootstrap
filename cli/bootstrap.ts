@@ -1,6 +1,6 @@
 import { log } from "../src/internal/log";
 import packageJson from "../package.json";
-import { bootstrap } from "../src/internal/bootstrap";
+import { run } from "../src";
 
 (async () => {
   if (process.argv.includes("--version")) {
@@ -11,7 +11,7 @@ import { bootstrap } from "../src/internal/bootstrap";
   log("Starting bootstrap", { env: JSON.stringify(process.env) });
 
   try {
-    await bootstrap();
+    await run();
   } catch (e) {
     if (e instanceof Error) {
       console.error(e.message);
@@ -20,5 +20,6 @@ import { bootstrap } from "../src/internal/bootstrap";
     }
     process.exit(1);
   }
+
   log("Bootstrap complete");
 })();

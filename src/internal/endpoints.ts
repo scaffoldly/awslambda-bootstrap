@@ -9,9 +9,24 @@ import {
   EndpointExecRequest,
   EndpointProxyRequest,
   EndpointResponse,
+  SpawnResult,
 } from "./types";
 import { info, log } from "./log";
 import { ChildProcess, spawn } from "child_process";
+import { APIGatewayProxyEventV2 } from "aws-lambda";
+
+function wsify(url?: URL): URL | undefined {
+  if (!url) return undefined;
+
+  const wsUrl = new URL(url.toString());
+  wsUrl.protocol = url.protocol.replace("http", "ws");
+
+  if (!wsUrl.protocol.startsWith("ws")) {
+    return undefined;
+  }
+
+  return wsUrl;
+}
 
 function convertHeaders(
   headers: RawAxiosResponseHeaders | AxiosResponseHeaders
@@ -78,12 +93,9 @@ const waitForEndpoint = async (
 
 export const endpointSpawn = async (
   handler: string,
-  env?: NodeJS.ProcessEnv
-): Promise<{
-  childProcess?: ChildProcess;
-  bin?: string;
-  endpoint?: URL;
-}> => {
+  env?: NodeJS.ProcessEnv,
+  detached: boolean = true
+): Promise<SpawnResult> => {
   // handler is in the format of
   // - `{some-bin}@http://localhost:{the-bins-port} (will start some-bin, and forward requests to the http server)
   // - `http://localhost:{some-port}` (will forward the request to the http server)
@@ -109,20 +121,26 @@ export const endpointSpawn = async (
 
     const cmds = bin.split(" ");
     childProcess = spawn(cmds[0], cmds.slice(1), {
-      detached: true,
+      detached,
       stdio: "inherit",
       env: env,
     });
 
-    // TODO Decide if we should do this...
-    childProcess.unref();
+    if (detached) {
+      childProcess.unref();
+    }
 
     log("Started child process", { cmds, pid: childProcess.pid });
   }
 
   endpoint = endpoint ? new URL(endpoint) : undefined;
 
-  return { childProcess, bin, endpoint };
+  return {
+    childProcess,
+    bin,
+    endpoint,
+    wsEndpoint: wsify(endpoint),
+  };
 };
 
 export const endpointExec = async ({
@@ -133,12 +151,21 @@ export const endpointExec = async ({
 }: EndpointExecRequest): Promise<EndpointResponse> => {
   const { execa } = await import("execa");
 
-  const { stdout } = await execa({
+  const timeout = deadline - Date.now();
+
+  info(`Running: \`${bin}\``);
+
+  const subprocess = execa({
     stderr: ["inherit"],
   })`${bin} ${event}`;
 
-  // TODO: handle deadline
-  info("TODO: need to handle deadline", { deadline });
+  setTimeout(() => {
+    subprocess.kill(
+      Error(`${bin} took longer than ${timeout} milliseconds to start.`)
+    );
+  }, timeout);
+
+  const { stdout } = await subprocess;
 
   const payload = JSON.parse(stdout);
 
@@ -154,6 +181,8 @@ export const endpointProxy = async ({
   event,
   deadline,
 }: EndpointProxyRequest): Promise<EndpointResponse> => {
+  const rawEvent = JSON.parse(event) as Partial<APIGatewayProxyEventV2>;
+
   const {
     requestContext,
     rawPath,
@@ -161,7 +190,12 @@ export const endpointProxy = async ({
     headers: rawHeaders,
     body: rawBody,
     isBase64Encoded,
-  } = event;
+  } = rawEvent;
+
+  if (!requestContext) {
+    throw new Error("No request context found in event");
+  }
+
   const method = requestContext.http.method;
 
   log("Waiting for endpoint to start", { endpoint, deadline });
@@ -169,8 +203,12 @@ export const endpointProxy = async ({
 
   if (!timeout) {
     throw new Error(
-      `${endpoint.toString()} took longer than ${deadline} milliseconds to start.`
+      `${endpoint.toString()} took longer than ${timeout} milliseconds to start.`
     );
+  }
+
+  if (!rawPath) {
+    throw new Error("No path found in event");
   }
 
   const url = new URL(rawPath, endpoint);
@@ -181,7 +219,7 @@ export const endpointProxy = async ({
   const decodedBody =
     isBase64Encoded && rawBody ? Buffer.from(rawBody, "base64") : rawBody;
 
-  log("Proxying request", { url, method, rawHeaders, decodedBody, timeout });
+  log("Proxying request", { url, method, rawHeaders, timeout });
 
   let response: AxiosResponse<any, any> | undefined = undefined;
   try {
@@ -207,7 +245,7 @@ export const endpointProxy = async ({
 
   const { data: rawData, headers: rawResponseHeaders } = response;
 
-  log("Proxy request complete", { url, method, rawResponseHeaders, rawData });
+  log("Proxy request complete", { url, method, rawResponseHeaders });
 
   return {
     requestId,

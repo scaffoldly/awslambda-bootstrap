@@ -1,22 +1,30 @@
 import { APIGatewayProxyResult } from "aws-lambda";
+import { ChildProcess } from "child_process";
 
-export type LambdaEvent = {
+export type SpawnResult = {
+  childProcess?: ChildProcess;
+  bin?: string;
+  endpoint?: URL;
+  wsEndpoint?: URL;
+};
+
+export type RuntimeEvent = {
   requestId: string;
-  event: any;
+  event: string;
   deadline: number;
 };
 
 export type EndpointExecRequest = {
   requestId: string;
   bin: string;
-  event: any;
+  event: string;
   deadline: number;
 };
 
 export type EndpointProxyRequest = {
   requestId: string;
   endpoint: URL;
-  event: any;
+  event: string;
   deadline: number;
 };
 
