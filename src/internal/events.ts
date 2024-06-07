@@ -26,7 +26,7 @@ export const pollForEvents = async (
 
     payload = (await endpointExec(request)).payload;
 
-    log("Bin execution complete", { bin, payload });
+    log("Bin execution complete", { bin });
   } else if (endpoint) {
     log("Endpoint specified, proxying request", { endpoint });
 
@@ -39,7 +39,7 @@ export const pollForEvents = async (
 
     payload = (await endpointProxy(request)).payload;
 
-    log("Proxy request complete", { endpoint, payload });
+    log("Proxy request complete", { endpoint });
   } else {
     throw new Error(
       `
