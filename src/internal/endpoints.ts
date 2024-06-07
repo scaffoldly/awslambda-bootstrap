@@ -126,10 +126,6 @@ export const endpointSpawn = async (
       env: env,
     });
 
-    if (detached) {
-      childProcess.unref();
-    }
-
     log("Started child process", { cmds, pid: childProcess.pid });
   }
 
