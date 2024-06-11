@@ -2,7 +2,6 @@ import axios, {
   AxiosResponse,
   AxiosResponseHeaders,
   RawAxiosResponseHeaders,
-  isAxiosError,
 } from "axios";
 import net from "net";
 import {
