@@ -225,6 +225,8 @@ export const endpointProxy = async ({
       headers: rawHeaders,
       data: decodedBody,
       timeout,
+      transformRequest: (data) => data,
+      transformResponse: (data) => data,
       responseType: "arraybuffer",
     });
   } catch (e) {
