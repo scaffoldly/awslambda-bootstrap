@@ -218,24 +218,18 @@ export const endpointProxy = async ({
   log("Proxying request", { url, method, rawHeaders, timeout });
 
   let response: AxiosResponse<any, any> | undefined = undefined;
-  try {
-    response = await axios.request({
-      method: method.toLowerCase(),
-      url: url.toString(),
-      headers: rawHeaders,
-      data: decodedBody,
-      timeout,
-      transformRequest: (data) => data,
-      transformResponse: (data) => data,
-      responseType: "arraybuffer",
-    });
-  } catch (e) {
-    if (isAxiosError(e) && e.response) {
-      response = e.response;
-    } else {
-      throw e;
-    }
-  }
+
+  response = await axios.request({
+    method: method.toLowerCase(),
+    url: url.toString(),
+    headers: rawHeaders,
+    data: decodedBody,
+    timeout,
+    transformRequest: (data) => data,
+    transformResponse: (data) => data,
+    validateStatus: () => true,
+    responseType: "arraybuffer",
+  });
 
   if (!response) {
     throw new Error("No response received");
