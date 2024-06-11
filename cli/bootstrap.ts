@@ -13,6 +13,8 @@ import { run } from "../src";
   try {
     await run();
   } catch (e) {
+    log("Bootstrap failed", { error: e });
+
     if (e instanceof Error) {
       console.error(e.message);
     } else {
