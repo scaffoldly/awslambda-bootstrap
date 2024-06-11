@@ -2,11 +2,13 @@ import { log } from "./log";
 import { EndpointProxyRequest, EndpointExecRequest } from "./types";
 import { endpointExec, endpointProxy } from "./endpoints";
 import { getRuntimeEvent, postRuntimeEventResponse } from "./runtime";
+import { WebsocketProxy } from "./websocket";
 
 export const pollForEvents = async (
   runtimeApi: string,
   bin?: string,
-  endpoint?: URL
+  endpoint?: URL,
+  wsProxy?: WebsocketProxy
 ): Promise<void> => {
   log("Waiting for next event from Lambda Runtime API", { runtimeApi });
 
@@ -15,7 +17,7 @@ export const pollForEvents = async (
   let payload: any | undefined = undefined;
 
   if (bin && !endpoint) {
-    log("No endpoint specified, executing bin", { bin });
+    log("Executing bin", { bin });
 
     const request: EndpointExecRequest = {
       requestId,
@@ -26,20 +28,21 @@ export const pollForEvents = async (
 
     payload = (await endpointExec(request)).payload;
 
-    log("Bin execution complete", { bin });
+    log("Bin execution complete");
   } else if (endpoint) {
-    log("Endpoint specified, proxying request", { endpoint });
+    log("Proxying request", { endpoint });
 
     const request: EndpointProxyRequest = {
       requestId,
       endpoint,
       event,
       deadline,
+      wsProxy,
     };
 
     payload = (await endpointProxy(request)).payload;
 
-    log("Proxy request complete", { endpoint });
+    log("Proxy request complete");
   } else {
     throw new Error(
       `
@@ -57,5 +60,5 @@ Expected format: {bin}@{endpoint} or {bin} or {endpoint}:
 
   log("Response sent to Lambda Runtime API", { runtimeApi, requestId });
 
-  return pollForEvents(runtimeApi, bin, endpoint);
+  return pollForEvents(runtimeApi, bin, endpoint, wsProxy);
 };

@@ -1,11 +1,11 @@
 import { APIGatewayProxyResult } from "aws-lambda";
 import { ChildProcess } from "child_process";
+import { WebsocketProxy } from "./websocket";
 
 export type SpawnResult = {
   childProcess?: ChildProcess;
   bin?: string;
   endpoint?: URL;
-  wsEndpoint?: URL;
 };
 
 export type RuntimeEvent = {
@@ -26,6 +26,7 @@ export type EndpointProxyRequest = {
   endpoint: URL;
   event: string;
   deadline: number;
+  wsProxy?: WebsocketProxy;
 };
 
 export type EndpointResponse = {

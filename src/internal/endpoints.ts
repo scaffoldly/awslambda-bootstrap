@@ -14,19 +14,6 @@ import { info, log } from "./log";
 import { ChildProcess, spawn } from "child_process";
 import { APIGatewayProxyEventV2 } from "aws-lambda";
 
-function wsify(url?: URL): URL | undefined {
-  if (!url) return undefined;
-
-  const wsUrl = new URL(url.toString());
-  wsUrl.protocol = url.protocol.replace("http", "ws");
-
-  if (!wsUrl.protocol.startsWith("ws")) {
-    return undefined;
-  }
-
-  return wsUrl;
-}
-
 function convertHeaders(
   headers: RawAxiosResponseHeaders | AxiosResponseHeaders
 ): { [header: string]: boolean | number | string } | undefined {
@@ -92,8 +79,7 @@ const waitForEndpoint = async (
 
 export const endpointSpawn = async (
   handler: string,
-  env?: NodeJS.ProcessEnv,
-  detached: boolean = true
+  env?: NodeJS.ProcessEnv
 ): Promise<SpawnResult> => {
   // handler is in the format of
   // - `{some-bin}@http://localhost:{the-bins-port} (will start some-bin, and forward requests to the http server)
@@ -120,7 +106,7 @@ export const endpointSpawn = async (
 
     const cmds = bin.split(" ");
     childProcess = spawn(cmds[0], cmds.slice(1), {
-      detached,
+      detached: true,
       stdio: "inherit",
       env: env,
     });
@@ -134,7 +120,6 @@ export const endpointSpawn = async (
     childProcess,
     bin,
     endpoint,
-    wsEndpoint: wsify(endpoint),
   };
 };
 
@@ -175,8 +160,11 @@ export const endpointProxy = async ({
   endpoint,
   event,
   deadline,
+  wsProxy,
 }: EndpointProxyRequest): Promise<EndpointResponse> => {
   const rawEvent = JSON.parse(event) as Partial<APIGatewayProxyEventV2>;
+
+  log("!!! Received event", { requestId, rawEvent });
 
   const {
     requestContext,
@@ -200,6 +188,10 @@ export const endpointProxy = async ({
     throw new Error(
       `${endpoint.toString()} took longer than ${timeout} milliseconds to start.`
     );
+  }
+
+  if (wsProxy) {
+    wsProxy.init();
   }
 
   if (!rawPath) {
