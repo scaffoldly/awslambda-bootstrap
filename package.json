@@ -12,7 +12,7 @@
     "scripts/**/*"
   ],
   "bin": {
-    "bootstrap": "dist/bootstrap.js",
+    "awslambda-bootstrap": "dist/bootstrap.js",
     "lambda-env": "scripts/lambda-env.cjs"
   },
   "scripts": {
