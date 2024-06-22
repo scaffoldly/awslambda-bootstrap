@@ -1,6 +1,6 @@
-import { log } from "../src/internal/log";
+import { log } from "./internal/log";
 import packageJson from "../package.json";
-import { run } from "../src";
+import { run } from ".";
 
 (async () => {
   if (process.argv.includes("--version")) {

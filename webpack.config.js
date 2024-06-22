@@ -14,7 +14,7 @@ module.exports = {
   mode: "production",
 
   // entry files
-  entry: "./cli/bootstrap.ts",
+  entry: "./src/bootstrap.ts",
 
   // output bundles (location)
   output: {
