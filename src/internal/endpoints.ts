@@ -135,13 +135,15 @@ export const endpointExec = async ({
 
   info(`Running: \`${bin}\``);
 
-  const subprocess = execa({
-    stderr: ["inherit"],
-  })`${bin} ${event}`;
+  const abortController = new AbortController();
+  const subprocess = execa(bin, [event], {
+    stderr: "inherit",
+    signal: abortController.signal,
+  });
 
   setTimeout(() => {
-    subprocess.kill(
-      Error(`${bin} took longer than ${timeout} milliseconds to start.`)
+    abortController.abort(
+      new Error(`${bin} took longer than ${timeout} milliseconds to start.`)
     );
   }, timeout);
 
